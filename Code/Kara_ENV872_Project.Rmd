@@ -11,6 +11,8 @@ author: Your Name
 abstract: "Experimental overview. This section should be no longer than 250 words."
 fontsize: 12pt
 mainfont: Times New Roman
+editor_options: 
+  chunk_output_type: console
 ---
 
 <Information in these brackets are used for annotating the RMarkdown file. They will not appear in the final version of the PDF document>
@@ -42,6 +44,8 @@ library(tidyverse)
 library(trend)
 library(lubridate)
 library(grid)
+library(knitr)
+library(summarytools)
 
 # Set your ggplot theme
 NK.theme <- theme_light(base_size = 12) +
@@ -88,7 +92,9 @@ EIA.data.2001_2019 <- rbind(data.2001_2002,data.2003_2004,data.2005_2007,data.20
 
 
 ```{r, echo=FALSE}
-#Generating a table 
+#Generating a table that summarizes your data structure
+Str.EIA.data <- summary(EIA.data.2001_2019)
+kable(Str.EIA.data)
 ```
 
 \newpage
@@ -97,6 +103,185 @@ EIA.data.2001_2019 <- rbind(data.2001_2002,data.2003_2004,data.2005_2007,data.20
 
 <Include R chunks for 5+ lines of summary code (display code and output), 3+ exploratory graphs (display graphs only), and any wrangling you do to your dataset(s).> 
 
+##Initial data exploration
+
+> Explored the raw data set to determine the general structure of the dataset and variables within as shown in the code below. This exploration also included displaying the first 10 rows and last 10 rows of the dataset.
+
+```{r, echo=TRUE}
+#Summary code
+#Structure of the dataset
+str(EIA.data.2001_2019)
+
+#Collumn names of the variables
+colnames(EIA.data.2001_2019)
+
+#First 10 rows of the dataset
+kable(head(EIA.data.2001_2019, 10), caption = "First 10 rows of the raw dataset, EIA.data.2001_2019")
+#Last 10 rows of the dataset
+kable(tail(EIA.data.2001_2019, 10), caption = "Last 10 rows of the raw dataset, EIA.data.2001_2019")
+```
+
+
+> Further explored the dataset to determine the different factor types in the variables 'TYPE.OF.PRODUCER' and 'ENERGY.SOURCE' and the number of unique factors in the STATE variable.
+
+```{r, echo=TRUE}
+#Showing the different factors in TYPE.OF.PRODUCER variable
+kable(freq(EIA.data.2001_2019$TYPE.OF.PRODUCER), caption = "Factor types of Type of Producer Variable")
+
+#Showing the different factors in ENERGY.SOURCE variable
+kable(freq(EIA.data.2001_2019$ENERGY.SOURCE), caption = "Factor types of Energy Source Variable")
+
+#Showing the number of unique state types in the STATE variable
+unique(EIA.data.2001_2019$STATE)
+length(unique(EIA.data.2001_2019$STATE))
+```
+
+> The above data exploration revealed the following factors of interest, *Total Electric Power Industry* in the variable **Type of Producer** and *US-TOTAL* and *US-Total* in the **State** variable. Further data exploration was carried out to determine if the *Total Electric Power Industry* factor represents electricity generation values for the summation of all other types of producers and the factor, between *US-TOTAL* and *US-Total* that represents total electricity generation in all states (at the national level).
+
+## Initial data wrangling to determine variation on Producer Types and State factors
+
+```{r, echo=TRUE}
+#Getting a summ of elec generation for of all types of producers and comparing it total electric power industry  
+EIA.data.producers <- EIA.data.2001_2019 %>%
+  summarise(`First 5 producer types (GWh)` = sum(as.numeric(GENERATION..Megawatthours.[TYPE.OF.PRODUCER!="Total Electric Power Industry"]))/1000,
+            `Total Electric Power Industry (GWh)` = sum(as.numeric(GENERATION..Megawatthours.[TYPE.OF.PRODUCER=="Total Electric Power Industry"]))/1000)
+
+kable(EIA.data.producers, caption = "Total electricity generation by producer types.")
+```
+
+> The total electricity generation of all producer types except 'Total Electric Power Industry' was equal to that of 'Total Electric Power Industry'
+
+```{r}
+EIA.Data.only_states <- EIA.data.2001_2019 %>%
+  filter(TYPE.OF.PRODUCER=="Total Electric Power Industry") %>%
+  filter(ENERGY.SOURCE=="Total") %>%
+  filter(STATE!= "US-TOTAL" & STATE!= "US-Total") %>%
+  mutate(Date = make_date(YEAR,MONTH))
+
+EIA.Data.only_states.sum <- EIA.Data.only_states %>%
+  summarise(`Total Elec Gen for States (GWh)` = sum(as.numeric(GENERATION..Megawatthours.))/1000)
+
+EIA.Data.US <- EIA.data.2001_2019 %>%
+  filter(TYPE.OF.PRODUCER=="Total Electric Power Industry") %>%
+  filter(ENERGY.SOURCE=="Total") %>%
+  filter(STATE== "US-TOTAL" | STATE== "US-Total") %>%
+  mutate(Date = make_date(YEAR,MONTH))
+
+EIA.Data.US.sum <- EIA.Data.US %>%
+  summarise(`Total Elec Gen US-TOTAL  (GWh)` = sum(as.numeric(GENERATION..Megawatthours.[STATE=="US-TOTAL"]))/1000,
+            `Total Elec Gen US-Total  (GWh)` = sum(as.numeric(GENERATION..Megawatthours.[STATE=="US-Total"]))/1000,
+            `Total Elec Gen US-Both  (GWh)` = sum(as.numeric(GENERATION..Megawatthours.))/1000)
+
+EIA.Data.States.US.sum <- cbind(EIA.Data.only_states.sum,EIA.Data.US.sum)
+kable(EIA.Data.States.US.sum, caption = "Summation of Total Electricity generation for all STATES and both US factors")
+```
+
+##Data visualization
+
+**Plot of variation in electricity generation at the National level**
+```{r, echo=false}
+Plot1 <- 
+  ggplot(EIA.Data.US,aes(x=as.Date(Date), y=(GENERATION..Megawatthours./1000), color = STATE)) +
+  geom_line() +
+  ylab("Electricity generation (GWh)") +
+  xlab("Date (Year)") +
+  labs(color = "State",title = "National Electricity generation") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%m/%Y") +
+  theme(axis.text.x = element_text(angle = 45,  hjust = 1)) +
+  scale_colour_manual("National generation",
+                      values = c("US-TOTAL"="brown3", 
+                                 "US-Total"="darkorange3"))
+```
+
+```{r, echo=FALSE,fig.height = 5, fig.width = 5, fig.cap="National electricity generation"}
+print(Plot1)
+```
+
+> There was a small variation between the total states electricity generation and the US summation as shown in the table above. A dataset using only the states data was therefore used for the project analysis.
+
+**Plot of variation in electricity generation at the State level**
+```{r, echo=false}
+Plot2 <- 
+  ggplot(data = subset(EIA.Data.only_states,(Date == "2019-01-01")),aes(x=STATE, y=(GENERATION..Megawatthours./1000), fill = STATE)) +
+  geom_col() +
+  ylab("Electricity generation (GWh)") +
+  xlab("State") +
+  labs(title = "Total electricity generation in Jan 2019 per state") +
+  theme(axis.text.x = element_text(angle = 90,  hjust = 1, vjust = 0.4), legend.position="none")
+```
+
+```{r, echo=FALSE,fig.height = 5, fig.width = 5, fig.cap="Total electricity generation in Jan 2019 per state"}
+print(Plot2)
+```
+
+
+##Data wrangling to create the main dataset for analysis across all states
+
+> To obtain the first dataset for data analysis, EIA.data.by_state, the EIA.data.2001_2019 raw dataset was wrangled as shown in the code below to include only the Total Electric Power Industry which is a summation of all producer codes as shown in the table XX above and to remove US national totals. The data wrangling was also done to spread data according to MWh generation of each energy source and to combine the year and month collumn into one date variable. The final dataset, EIA.data.by_state, includes the following variables of interest: Date, State, Geothermal, Hydro,Other.Biomass, Solar, Wind, Wood.products, Renewable.total, Coal, Nat.Gas, Petroleum, Total 
+
+```{r, echo=TRUE}
+EIA.data.by_state <- EIA.data.2001_2019 %>%
+  filter(TYPE.OF.PRODUCER=="Total Electric Power Industry") %>%
+  filter(STATE!= "US-TOTAL" & STATE!= "US-Total") %>%
+  spread(ENERGY.SOURCE,GENERATION..Megawatthours.) %>%
+  mutate(Geothermal =ifelse(is.na(Geothermal),0,Geothermal)) %>%
+  mutate(Hydro = ifelse(is.na(`Hydroelectric Conventional`),0,`Hydroelectric Conventional`)) %>%
+  mutate(Other.Biomass = ifelse(is.na(`Other Biomass`),0,`Other Biomass`)) %>%
+  mutate(Solar = ifelse(is.na(`Solar Thermal and Photovoltaic`),0,`Solar Thermal and Photovoltaic`)) %>%
+  mutate(Wind = ifelse(is.na(Wind),0,Wind)) %>%
+  mutate(Wood.products = ifelse(is.na(`Wood and Wood Derived Fuels`),0,`Wood and Wood Derived Fuels`)) %>%
+  mutate(Renewable.total = Geothermal+Hydro+Other.Biomass+Solar+Wind+Wood.products) %>%
+  mutate(Coal = ifelse(is.na(Coal),0,Coal)) %>%
+  mutate(Nat.Gas = ifelse(is.na(`Natural Gas`),0,`Natural Gas`)) %>%
+  mutate(Petroleum = ifelse(is.na(Petroleum),0,Petroleum)) %>%
+  mutate(Date = make_date(YEAR,MONTH)) %>%
+  select(Date, STATE, Geothermal,Hydro,Other.Biomass,Solar,Wind, Wood.products,Coal,Nat.Gas,Petroleum,Renewable.total,Total)
+```
+
+
+###Data exploration of created data analysis dataset
+
+> Table below shows the summary statistics for the electricity generation from all the selected energy sources including total renewable energy (Renewable.total variable) and all the energy sources (Total variable).
+
+```{r, echo=FALSE}
+#Summary statistics for total electricity generation in MWh for all states
+Elec.Gen.stats <- summarytools::descr(EIA.data.by_state[,3:13], stats = c("N.Valid","Pct.Valid","mean", "sd", "min", "med", "max", "iqr"), transpose = TRUE)
+
+kable(Elec.Gen.stats, caption = "Summary statistics for electricity generation (MWh) by energy source for all states")
+```
+
+###Data visualization of created data analyis dataset
+**
+```{r, echo=FALSE}
+EIA.data.plot3 <- EIA.data.by_state %>%
+  group_by(Date) %>%
+  summarise(Total.Geothermal = sum(Geothermal),
+            Total.Hydro = sum(Hydro),
+            Total.Other.Biomass = sum(Other.Biomass),
+            Total.Solar = sum(Solar),
+            Total.Wind = sum(Wind),
+            Total.wood.products = sum(Wood.products),
+            Total.Coal = sum(Coal),
+            Total.Nat.Gas = sum(Nat.Gas),
+            Total.Petroleum = sum(Petroleum))
+Plot3 <-
+  ggplot(EIA.data.plot3,aes(x=as.Date(Date))) +
+  geom_line(y = Total.Hydro/1000, color ="blue4" ) +
+  geom_line(y = Total.Solar/1000, color ="yellow3" ) +
+  geom_line(y = Total.Wind/1000, color ="maroon4") +
+  geom_line(y = Total.Coal/1000, color ="gray20") +
+  geom_line(y = Total.Nat.Gas/1000, color ="" ) +
+  geom_line(y = Total.Petroleum/1000, color ="lightgoldenrod3" ) +
+  ylab("Generation (MWh)") +
+  xlab("Date (Year)") +
+  labs(color = "Energy Source",title = "Total electricity generation by energy source") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%m/%Y") +
+  theme(axis.text.x = element_text(angle = 45,  hjust = 1))
+print(Plot3)
+```
+
+
+
 <Include text sections to accompany these R chunks to explain the reasoning behind your workflow, and the rationale for your approach.>
 
 
@@ -104,6 +289,265 @@ EIA.data.2001_2019 <- rbind(data.2001_2002,data.2003_2004,data.2005_2007,data.20
 
 # Analysis
 <Include R chunks for 3+ statistical tests (display code and output) and 3+ final visualization graphs (display graphs only).>
+
+#Kansas Data
+
+```{r echo=FALSE}
+#grouping data by state
+#Kansas Data
+
+data.KS.state <- data.2001_2019 %>%
+  filter(STATE=="KS") %>%
+  filter(TYPE.OF.PRODUCER=="Total Electric Power Industry") %>%
+  spread(ENERGY.SOURCE,GENERATION..Megawatthours.) %>%
+  mutate(Hydro = ifelse(is.na(`Hydroelectric Conventional`),0,`Hydroelectric Conventional`)) %>%
+  mutate(Other.Biomass = ifelse(is.na(`Other Biomass`),0,`Other Biomass`)) %>%
+  mutate(Solar = ifelse(is.na(`Solar Thermal and Photovoltaic`),0,`Solar Thermal and Photovoltaic`)) %>%
+  mutate(Wind = ifelse(is.na(Wind),0,Wind)) %>%
+  mutate(Renewable.total = Hydro+Other.Biomass+Solar+Wind) %>%
+  select(YEAR,MONTH,Wind,Renewable.total,Total) %>%
+  mutate(Date = make_date(YEAR,MONTH)) %>%
+  select(Date,Wind,Renewable.total,Total)
+
+#CoNVerting into time series
+KS.ts.data <- ts(data.KS.state[,2:4], start = c(2001,01), end=c(2019,1),frequency = 12)
+KS.Wind <- ts(data.KS.state[,2], start = c(2001,01), end=c(2019,1),frequency = 12)
+KS.renewable <- ts(data.KS.state[,3], start = c(2001,01), end=c(2019,1),frequency = 12)
+KS.total <- ts(data.KS.state[,4], start = c(2001,01), end=c(2019,1),frequency = 12)
+
+nobs <- nrow(KS.ts.data)
+t <- 1:nobs
+
+#Wind plot
+ggplot(data = data.KS.state, aes(x = Date, y = (Wind/1000))) +
+  geom_line(color = "darkorange", linetype = "solid") +
+  xlab("Date") +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Kansas Wind energy series") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+
+#Total renewable energy plot
+ggplot(data = data.KS.state, aes(x = Date, y = (Renewable.total/1000))) +
+  geom_line(color = "darkgreen") +
+  xlab("Date") +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Kansas renewable energy series") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+
+#Total Energy
+ggplot(data = data.KS.state, aes(x = Date, y = (Total/1000))) +
+  geom_line(color = "darkred") +
+  xlab("Date") +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Kansas total energy generation series") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+
+```
+
+```{r}
+ggplot(data = data.KS.state, (aes(x = Date))) +
+  geom_line(aes(y = (Total/1000), color = "Total")) +
+  geom_line(aes(y = (Wind/1000), color = "Wind")) +
+  geom_line(aes(y = (Renewable.total/1000), color ="Renewable"), size = 2.5, alpha = 0.3) +
+  geom_segment(aes(x = as.Date("2009-07-01"), y = 1500, xend = as.Date("2009-07-01"), yend = 200), arrow = arrow(length = unit(0.3, "cm")), color= "darkolivegreen", linetype = "dashed") +geom_label(aes(label="Change point 1", x=as.Date("2009-07-01"), y = 1500) , size=3, fill= "darkolivegreen", color = "white") +
+  geom_segment(aes(x = as.Date("2015-10-01"), y = 2400, xend = as.Date("2015-10-01"), yend = 1100), arrow = arrow(length = unit(0.3, "cm")), color= "darkolivegreen", linetype = "dashed") +geom_label(aes(label="Change point 2", x=as.Date("2015-10-01"), y = 2400) , size=3, fill= "darkolivegreen", color = "white") +
+  xlab("Date") +
+  ylab("Electricity Generation (GWh)") +
+  labs(title = "Kansas Electricity Generation by Source") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_colour_manual("Energy sources",
+                      values = c("Total"="goldenrod3", 
+                                 "Wind"="springgreen4",
+                                 "Renewable"="yellowgreen")) 
+
+```
+
+
+##removing seasonal component out trend and change point test
+```{r}
+#Checking for Stochastic trend of the Wind series
+KS.Wind.decomp <- decompose(KS.Wind)
+deseasonal_KS.Wind <- seasadj(KS.Wind.decomp) 
+
+#Checking for a stochastic trend with ADF test
+adf.test(deseasonal_KS.Wind, alternative = "stationary")
+
+
+#Checking for a stochastic trend in the renewable energy seroes
+KS.renewable.decomp <- decompose(KS.renewable)
+deseasonal_KS.renewable <- seasadj(KS.renewable.decomp) 
+#Checking for a stochastic trend with ADF test
+adf.test(deseasonal_KS.renewable, alternative = "stationary")
+
+
+#Checking for a stochastic trend in the total energy series
+KS.total.decomp <- decompose(KS.total)
+deseasonal_KS.total <- seasadj(KS.total.decomp) 
+#Checking for a stochastic trend with ADF test
+adf.test(deseasonal_KS.total, alternative = "stationary")
+#Checking for a stationary trend using the Mann Kendall Test
+MannKendall(deseasonal_KS.total)
+```
+
+>The result of the ADF test of  the Wind  series (p=0.7845) indicates that the series has a stochastic trend, this result is similar for the total renewable energy series (p=0.7843). However, for the total energy series, the low p-value result (p=0.01) indicates that the series does not have a stochastic trend. A Mann Kendall test was therefore also carried out on the total energy series to test for a deterministic trend in the series. The result of the Mann Kendall test (p =< 2.22e-16) indicates that the series has a positive deterministic trend. 
+
+```{r}
+#analysis of first change point
+pettitt.test(deseasonal_KS.Wind)
+pettitt.test(deseasonal_KS.renewable)
+
+pettitt.test(deseasonal_KS.total)
+
+```
+
+> pvalues are small therefore a change point was detected in both series in June 2009 (102) for the wind and renwable energy series. For the Total energy series, a change point was detected in March 2013 (147) 
+
+```{r}
+#analysis of second change point
+pettitt.test(deseasonal_KS.Wind[103:217])
+pettitt.test(deseasonal_KS.renewable[103:217])
+
+pettitt.test(deseasonal_KS.total[148:217])
+```
+
+> low p value in both wind and renewable series therefore there is a significant changepoint at obs 50 (152). This changepoint occured at August 2013.
+For the total energy series, a change point was detected in 191 (Nov 2016)
+
+
+```{r}
+#analysis of second change point
+pettitt.test(deseasonal_KS.Wind[153:217])
+pettitt.test(deseasonal_KS.renewable[153:217])
+
+pettitt.test(deseasonal_KS.total[192:217])
+```
+
+> low p value for the renewable energu series indicates a significant changepoint at obs 26 (178). This changepoint occured at October 2015.
+
+```{r}
+#analysis of second change point
+pettitt.test(deseasonal_KS.renewable[179:217])
+```
+
+
+##removing trend component for each of the 3 groups of data - Renewables series
+###First group of data
+```{r echo=FALSE}
+#Lm 
+KS.1.t <- 1:103
+KS.1.ren <- data.KS.state[1:103,3]
+lm.KS1 <- lm(KS.1.ren~KS.1.t)
+summary(lm.KS1 )
+# Storing the coefficients of the model.Bio
+Beta0.KS1 <- lm.KS1$coefficients[1]
+Beta1.KS1 <- lm.KS1$coefficients[2]
+```
+
+Detrending series group 1
+```{r echo=FALSE}
+### Detrending series for Total.Biomass.Energy.Production series
+Y_detrend.KS1 <- array(0,nobs)
+for (i in 1:102){
+  Y_detrend.KS1[i]= KS.renewable[i]-(Beta0.KS1+Beta1.KS1*i)
+}
+
+Y_detrend.KS1 <- ts(Y_detrend.KS1,frequency = 12)
+
+#Plot of detrended group 1 series compared to normal series
+ggplot() + 
+  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
+  geom_line(data = Y_detrend.KS1, aes(x = t, y = Y_detrend.KS1[t]/1000), color = "black") +
+  xlab('Time (months)') +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Detrended Renewable energy series from 01/2001 to 07/2009") +
+  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black")) +
+  theme(legend.position=c(150,1200))
+```
+
+###2nd group of data
+```{r echo=FALSE}
+#Lm 
+KS.2.t <- 103:153
+KS.2.ren <- data.KS.state[103:153,3]
+lm.KS2 <- lm(KS.2.ren~KS.2.t)
+summary(lm.KS2 )
+# Storing the coefficients of the model.Bio
+Beta0.KS2 <- lm.KS2$coefficients[1]
+Beta1.KS2 <- lm.KS2$coefficients[2]
+```
+
+Detrending series group 2
+```{r echo=FALSE}
+### Detrending series for Total.Biomass.Energy.Production series
+Y_detrend.KS2 <- array(0,nobs)
+for (i in 103:153){
+  Y_detrend.KS2[i]= KS.renewable[i]-(Beta0.KS2+Beta1.KS2*i)
+}
+
+Y_detrend.KS2 <- ts(Y_detrend.KS2,frequency = 12)
+
+#Plot of detrended group 2 series compared to normal series
+ggplot() + 
+  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
+  geom_line(data = Y_detrend.KS2, aes(x = t, y = Y_detrend.KS2[t]/1000), color = "black") +
+  xlab('Time(months)') +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Detrended Renewable energy series from 08/2009 to 12/2013") +
+  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black")) +
+  theme(legend.position=c(150,1200))
+
+```
+
+###3rd group of data
+```{r echo=FALSE}
+#Lm 
+KS.3.t <- 154:217
+KS.3.ren <- data.KS.state[154:217,3]
+lm.KS3 <- lm(KS.3.ren~KS.3.t)
+summary(lm.KS3 )
+# Storing the coefficients of the model.Bio
+Beta0.KS3 <- lm.KS3$coefficients[1]
+Beta1.KS3 <- lm.KS3$coefficients[2]
+```
+
+
+### Detrending series group 3
+```{r echo=FALSE}
+### Detrending series for Total.Biomass.Energy.Production series
+Y_detrend.KS3 <- array(0,154)
+for (i in 154:217){
+  Y_detrend.KS3[i]= KS.renewable[i]-(Beta0.KS3+Beta1.KS3*i)
+}
+
+Y_detrend.KS3 <- ts(Y_detrend.KS3,frequency = 12)
+
+
+#Plot of detrended group 2 series compared to normal series
+ggplot() + 
+  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
+  geom_line(data = Y_detrend.KS3, aes(x = t, y = Y_detrend.KS3[t]/1000), color = "black") +
+  xlab('Time (months)') +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Detrended Renewable energy series from 01/2014 to 01/2019") +
+  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black"))
+```
+
+##combining the detrended series
+```{r}
+detrended.KS.a <- append(Y_detrend.KS1[1:103],Y_detrend.KS2[104:153])
+detrended.KS <- append(detrended.KS.a , Y_detrend.KS3[154:217])
+detrended.KS <- ts(detrended.KS,start = c(2001,01), end=c(2019,1),frequency = 12)
+
+#Plot of full detrended series compared to normal series
+ggplot() + 
+  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
+  geom_line(data = detrended.KS, aes(x = t, y = detrended.KS/1000), color = "black") +
+  xlab('Time (months)') +
+  ylab("Energy Generation (GWh)") +
+  labs(title = "Detrended Renewable energy series from 01/2001 to 01/2019") +
+  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black"))
+
+```
 
 <Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
 
