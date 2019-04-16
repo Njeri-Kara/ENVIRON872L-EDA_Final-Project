@@ -8,7 +8,7 @@ geometry: margin=2.54cm
 title: Experiment Title
 subtitle: Web address for GitHub repository
 author: Your Name
-abstract: "Experimental overview. This section should be no longer than 250 words."
+abstract: "Electricity generation in the United States is dominated by fossil fuel-based technologies.Combustion of fossil fuelsis the main cause of human-driven emission of greenhouse gases (GHGs).Adoption of rebewable energy for electricity generation provides an opportunity to mitigate the negative environmental of fossil fuel fuel adoption. The US electricity generation has more than doubled since 2008. This paper analysed the trend in national and state level electricity generation from major renewable energy sources and found that post 2008 marks a season of significant change in the adoption trend of renewable energy resurces particularly wind and solar. It also found that policy changes could have contributed to this change in renewable energy adoption."
 fontsize: 12pt
 mainfont: Times New Roman
 editor_options: 
@@ -86,7 +86,7 @@ theme_set(NK.theme)
 
 > The U.S. Renewable Portfolio Standards 2018 Annual Status Report written by the Lawrence Berkeley National Laboratory was also used as the reerence source to obtain information on the years states, particularly Kansas and California, made major revisions to their RPS policies.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, include=FALSE}
 #importing the raw data
 data.2001_2002 <- read.csv("./Data/Raw/2001_2002_data.csv")
 data.2003_2004 <- read.csv("./Data/Raw/2003_2004_data.csv")
@@ -193,7 +193,7 @@ kable(EIA.Data.States.US.sum, caption = "Summation of Total Electricity generati
 ```
 
 **Plot of variation in electricity generation at the US-TOTAL and US-Total factor level**
-```{r, echo=false}
+```{r, echo=false, include=FALSE}
 Plot1 <- 
   ggplot(EIA.Data.US,aes(x=as.Date(Date), y=(GENERATION..Megawatthours./1000), color = STATE)) +
   geom_line() +
@@ -215,7 +215,7 @@ print(Plot1)
 > There was a small variation between the total states electricity generation and the US summation as shown in the table XX above. A dataset using only the states data was therefore used for the state level analysis and a dataset including summation of generation across states was used for the national level analysis. Date at the US-TOTAL and US-Total factor level were therefore not used because of the slight discrepacy with aggregated state values.  
 
 **Plot of variation in electricity generation at the State level**
-```{r, echo=false}
+```{r, echo=false, include=FALSE}
 Plot2 <- 
   ggplot(data = subset(EIA.Data.only_states,(Date == "2019-01-01")),aes(x=STATE, y=(GENERATION..Megawatthours./1000), fill = STATE)) +
   geom_col() +
@@ -291,7 +291,7 @@ kable(Elec.Gen.stats, caption = "Summary statistics for electricity generation (
 ###Data visualization of created datasets
 
 **Plot of national level electricity generation by main energy sources across time**
-```{r, echo=FALSE}
+```{r, echo=FALSE, include=FALSE}
 Plot3 <-
   ggplot(EIA.data.national,aes(x=as.Date(Date))) +
   geom_line(aes(y = National.Geothermal/1000, color ="Geothermal")) +
@@ -330,7 +330,7 @@ print(Plot3)
 
 > Based on the data exploration and specifically figure XX(PLOT3), The major renewable energy sources appear to be Hydroelectric power, wind energy and solar energy. The major non renewable energy sources are coal energy, natural gas energy and nuclear energy.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, include=FALSE}
 ##Renewable energy plot
 EIA.Data.plot4 <- EIA.data.national %>%
   gather("Energy Sources", "Electricity generation(MWh)", c(3,5,6,12)) %>%
@@ -359,7 +359,7 @@ print(Plot4)
 
 > Based on the series of the major renewable energy sources, hydroelectric energy does not appear to have any incleasing trend therefore it is unlikely that it has contributed to the visibly increasing growth in total renewable energy generation at the national level. Solar and wind energy however appear to have a similar increasing trend. The trend analysis at the national level was therefore carried out on the solar and wind series as well as the total renewable energy series.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE,include=FALSE}
 ##Non-renewable energy plot
 EIA.Data.plot5 <- EIA.data.national %>%
   mutate(National.non.ren.total = (National.Total - National.Renewable.total)) %>%
@@ -497,7 +497,7 @@ pettitt.test(deseasonal_Nat.Solar[195:217])
 > the high p-value (0.2886) of the test indicates that there no other significant changepoint.
 
 **Plot of National solar changepoints**
-```{r, echo=FALSE}
+```{r, echo=FALSE,include=FALSE}
 Plot6 <- ggplot(data = EIA.data.national, (aes(x = Date))) +
   geom_line(aes(y = (National.Solar/1000), color = "Solar")) +
   geom_line(aes(y = (National.Renewable.total/1000), color ="Renewable")) +
@@ -549,7 +549,7 @@ pettitt.test(deseasonal_Nat.Wind[190:217])
 > the high p-value (0.09209) of the test indicates that there no other significant changepoint.
 
 **Plot of National wind changepoints**
-```{r, echo=FALSE}
+```{r, echo=FALSE, include=FALSE}
 Plot7 <- ggplot(data = EIA.data.national, (aes(x = Date))) +
   geom_line(aes(y = (National.Wind/1000), color = "Wind")) +
   geom_line(aes(y = (National.Renewable.total/1000), color ="Renewable")) +
@@ -577,7 +577,7 @@ print(Plot7)
 
 ##### Kansas dataset
 
-```{r echo=FALSE}
+```{r echo=TRUE}
 #Creating Kansas Dataset
 data.KS.state <- EIA.data.by_state %>%
   filter(STATE=="KS") %>%
@@ -608,21 +608,21 @@ adf.test(deseasonal_KS.renewable, alternative = "stationary")
 
 ####Changepoint analysis of wind energy series
 
-```{r}
+```{r, echo=TRUE}
 #analysis of first change point
 pettitt.test(deseasonal_KS.Wind)
 ```
 
 > small pvalues (< 2.2e-16) indicates a significant change point was detected in both series in 2009-06-01 (102) for the wind series. 
 
-```{r}
+```{r, echo=TRUE}
 #analysis of second change point
 pettitt.test(deseasonal_KS.Wind[103:217])
 ```
 
 > small p value (< 2.2e-16) indicates a significant changepoint at obs 50 (152). This changepoint occured at 2013-08-01.
 
-```{r}
+```{r, echo=TRUE}
 #analysis of third change point
 pettitt.test(deseasonal_KS.Wind[153:217])
 ```
@@ -630,7 +630,7 @@ pettitt.test(deseasonal_KS.Wind[153:217])
 > small p value (1.17e-09) indicates a significant changepoint at obs 36 (188). This changepoint occured at 2016-08-01.
 
 **Plot of Kansas wind changepoints**
-```{r}
+```{r, echo=FALSE, include=FALSE}
 Plot8 <- ggplot(data = data.KS.state, (aes(x = Date))) +
   geom_line(aes(y = (Total/1000), color = "Total")) +
   geom_line(aes(y = (Wind/1000), color = "Wind")) +
@@ -655,7 +655,7 @@ print(Plot8)
 
 ###Trend analysis of solar energy in California.
 ##### California dataset
-```{r echo=FALSE}
+```{r , echo=TRUE}
 #Creating California Dataset
 data.CA.state <- EIA.data.by_state %>%
   filter(STATE=="CA") %>%
@@ -686,28 +686,28 @@ adf.test(deseasonal_CA.renewable, alternative = "stationary")
 
 ####Changepoint analysis of solar energy series
 
-```{r}
+```{r, echo=TRUE}
 #analysis of first change point
 pettitt.test(deseasonal_CA.Solar)
 ```
 
 > small p value (< 2.2e-16) indicates there a change point was detected in the  solar series in observation 142 corresponding to 2012-10-01. 
 
-```{r}
+```{r, echo=TRUE}
 #analysis of second change point
 pettitt.test(deseasonal_CA.Solar[143:217])
 ```
 
 > small p value (2.106e-11) indicates there a changepoint was detected at observation 39 (181) corresponding to 2016-01-01.
 
-```{r}
+```{r, echo=TRUE}
 #analysis of third change point
 pettitt.test(deseasonal_CA.Solar[182:217])
 ```
 
 > small p value (0.00846)indicates there a changepoint was detected at observation 13 (194) corresponding to 2017-02-01.
 
-```{r}
+```{r, echo=TRUE}
 #analysis of fourth change point
 pettitt.test(deseasonal_CA.Solar[195:217])
 ```
@@ -715,7 +715,7 @@ pettitt.test(deseasonal_CA.Solar[195:217])
 > large p value (0.6137)indicates there is no other significant changepoint. 
 
 **Plot of California solar changepoints**
-```{r}
+```{r, echo=FALSE,include=TRUE}
 Plot9 <- ggplot(data = data.CA.state, (aes(x = Date))) +
   geom_line(aes(y = (Total/1000), color = "Total")) +
   geom_line(aes(y = (Solar/1000), color = "Solar")) +
@@ -757,10 +757,8 @@ California solar energy | 10/2012       | 01/2016       |02/2017       |
 
 > Changepoint 1 and two at the national and state level do not appear to be related for both wind energy and solar. Change point 3 for solar and wind energy at the state and national level however coincide. This could indicate that significant increase in renewable energy levels is being driven by specific states and cannot neccessaritly be generalized to all.
 
-> The changepoint 1 in Kansas wind energy series coresponds to the year the state adopted the RPS policy. Changepoint 2 does not correspond to any policy change however it is the year Kansas reached its renewable energy target of 20% of its electricity generation being from renewable resources. 
+> The changepoint 1 in Kansas wind energy series coresponds to the year the state adopted the RPS policy. Changepoint 2 does not correspond to any policy change however it is the year Kansas reached its renewable energy target of 20% of its electricity generation being from renewable resources. It was expected that a changepoint would be detected in 2015 or early 2016 due to the Kansa's decision to repeal its RPS policy and change it from a mandatory goal to a voluntary one. A lack of clear changepoint related to this indicates negative policy changes may not have an immediate impact on adoption rates of renewable energy resource as compared to positive ones.
 
 > For California, changepoint 1 and 3 does not correspond to any major renewable energy policy changes. A major policy revison however took place in 2015 and could have resulted in a shift in the solar energy trend as shown in changepoint 2. 
 
 > It is therefore probable that polciy changes have impacted the adoption trends for wind and solar energy in Kansas and California, however more analysis needs to be done in this area to be able to definitively determine the causal relationship between policy changes and renewable energy adoption.
-
-
