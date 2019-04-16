@@ -58,9 +58,18 @@ theme_set(NK.theme)
 
 # Research Question and Rationale
 
-<Paragraph detailing the rationale for your analysis. What is the significant application and/or interest in this topic? Connect to environmental topic(s)/challenge(s).>
+> Electricity generation in the United States is dominated by fossil fuel-based technologies. According to the U.S. Energy Information Administration, In 2018 63.5 % (EIA, 2018) of the electricity generated in the country was from fossil fuel based sources such as coal and natural gas. The combustion of fossil fuels, necessary for electricity generation, is the main cause of human-driven emission of greenhouse gases (GHGs) (Quadrelli & Peterson, 2007) particularly carbon dioxide. The alternative use of renewable energy provides an opportunity to decarbonize the electricity sector and mitigate the negative emission impacts. In the US there appears to be a significant shift in electricity generation from fossil fuels to renewable energy in the last decade. EIA estimates that the adoption of renewable energy to generate electricity has doubled from 2008 to 2019 to account for about 17% (EIA, 2018) of the total electricity generation mix. 
 
-<Paragraph detailing your research question(s) and goals. What do you want to find out? Include a sentence (or a few) on the dataset you are using to answer this question - just enough to give your reader an idea of where you are going with the analysis.>
+> This paper will aim to:
+
+1. Research the trend in national level electricity generation from renewable energy sources disaggregated by the main renewable sources contributing to the growth in total proportion of renewable energy generation.
+
+2. Investigate the specific trends in wind energy adoption in Kansas and solar energy in California to identify any policy change implications on renewable energy adoption. 
+
+> Kansas state was selected for the second component of the analysis because wind energy contributes the largest proportion of the state's overall electricity generation (36% as of 2018) compared to other states. Kansas was also selected because in 2009 it adopted a mandatory renewable energy policy known as a Renewable Portfolio Standard (RPS) mandating that the state should generate 20% of its electricity from renewable sources by 2025. In 2015, Kansas repealed this policy and changing the renewable energy goal from mandatory to voluntary (Barbose, 2018). California was selected because solar energy contributes the largest proportion of the state's overall electricity generation (14% as of 2018) compared to other states. California also adopted an RPS policy in 2002. However, unlike Kansas, it is much more ambitious, it mandates that the state will generate 60% of its electricity from renewable sources by 2030 (Barbose, 2018). Also, unlike Kansas, California has made several revisions to its renewable energy policy to strengthen it including in 2006,2007,2011,2015 and 2018 (Barbose, 2018).  
+
+> The dataset that shall be used for this analysis is the Energy Information Administration (EIA) data on Monthly total electric power generation data by State and energy source from 2001 - 2018 available [here](https://www.eia.gov/electricity/data/state/generation_monthly.xlsx)
+
 
 \newpage
 
@@ -68,7 +77,6 @@ theme_set(NK.theme)
 
 <Information on how the dataset for this analysis were collected, the data contained in the dataset, and any important pieces of information that are relevant to your analyses. This section should contain much of same information as the README file for the dataset but formatted in a way that is more narrative.>
 
-<Add a table that summarizes your data structure. This table can be made in markdown text or inserted as a `kable` function in an R chunk. If the latter, do not include the code used to generate your table.>
 
 ```{r, echo=FALSE}
 #importing the raw data
@@ -93,7 +101,7 @@ EIA.data.2001_2019 <- rbind(data.2001_2002,data.2003_2004,data.2005_2007,data.20
 
 
 ```{r, echo=FALSE}
-#Generating a table that summarizes your data structure
+#Generating a table that summarizes the raw data structure
 Str.EIA.data <- summary(EIA.data.2001_2019)
 kable(Str.EIA.data)
 ```
@@ -450,7 +458,7 @@ MannKendall(deseasonal_Nat.Gas)
 
 > The null hypothesis of the  Mann-Kendall test is that there is no monotonic trend. The low p value of the test (pvalue =< 2.22e-16) indicates that we should reject the null hypothesis for the alternative that a monotonic trend is present in the natural gas series. The trend is increasing (tau = 0.817)
 
-###Changepoint analysis of major renewable energy series.
+###Changepoint analysis of major renewable energy sourcess.
 #### Changepoint analysis for solar energy series
 ```{r, echo=TRUE}
 #analysis of first change point for solar series
@@ -505,46 +513,7 @@ print(Plot6)
 
 
 
-#### Determining the linear trend of the solar series
-```{r}
-#Lm trend for solar series section 1
-Nat.Solar.1.t <- 1:130
-Nat.Solar.1.y <- deseasonal_Nat.Solar[1:130]
-lm.Nat.Solar.1 <- lm(Nat.Solar.1.y~Nat.Solar.1.t)
-summary(lm.Nat.Solar.1)
-```
 
-> Based on the results of the linear regression (F-statistic: 1.238 on 1 and 129 DF, p-value: 0.2679) there is no significant change in the electricity generation from solar energy before 2011-10-01
-
-```{r}
-#Lm trend for solar series section 2
-Nat.Solar.2.t <- 131:170
-Nat.Solar.2.y <- deseasonal_Nat.Solar[131:170]
-lm.Nat.Solar.2 <- lm(Nat.Solar.2.y~Nat.Solar.2.t)
-summary(lm.Nat.Solar.2)
-```
-
-> Based on the results of the linear regression (F-statistic: 238.1 on 1 and 38 DF,  p-value: < 2.2e-16) there is a significant change in the electricity generation from solar energy between 2011-10-01 and 2015-02-01 (between change point 1 and 2) with an increasing gradient of 43200 MWh for every month increase in time.
-
-```{r}
-#Lm trend for solar series section 3
-Nat.Solar.3.t <- 171:194
-Nat.Solar.3.y <- deseasonal_Nat.Solar[171:194]
-lm.Nat.Solar.3 <- lm(Nat.Solar.3.y~Nat.Solar.3.t)
-summary(lm.Nat.Solar.3)
-```
-
-> Based on the results of the linear regression (F-statistic: 15.39 on 1 and 22 DF,  p-value: 0.0007285) there is a significant change in the electricity generation from solar energy between 2015-02-01 and 2017-02-01 (between changepoint 2 and 3) with an increasing gradient of 53886 MWh for every month increase in time.
-
-```{r}
-#Lm trend for solar series section 4
-Nat.Solar.4.t <- 195:217
-Nat.Solar.4.y <- deseasonal_Nat.Solar[195:217]
-lm.Nat.Solar.4 <- lm(Nat.Solar.4.y~Nat.Solar.4.t)
-summary(lm.Nat.Solar.4)
-```
-
-> Based on the results of the linear regression (F-statistic: 0.3116 on 1 and 21 DF,  p-value: 0.5826) there is no significant change in the electricity generation from solar energy between 2017-02-01 to 2019-01-01 (after changepoint 3)
 
 
 #### Changepoint analysis for wind energy series
@@ -597,49 +566,6 @@ Plot7 <- ggplot(data = EIA.data.national, (aes(x = Date))) +
 ```{r, echo=FALSE,fig.height = 6, fig.width = 8, fig.cap="National Wind Electricity Generation Changepoints"}
 print(Plot7)
 ```
-
-#### Determining the linear trend of the wind series
-```{r}
-#Lm trend for wind series section 1
-Nat.Wind.1.t <- 1:110
-Nat.Wind.1.y <- deseasonal_Nat.Wind[1:110]
-lm.Nat.Wind.1 <- lm(Nat.Wind.1.y~Nat.Wind.1.t)
-summary(lm.Nat.Wind.1)
-```
-
-> Based on the results of the linear regression (F-statistic: 205.2 on 1 and 108 DF,  p-value: < 2.2e-16) there is a significant change in the electricity generation from wind energy before chnage point 1 in 2010-02-01. There is an increase of 55251 (MWh) generation for every month increase in time.
-
-```{r}
-#Lm trend for wind series section 2
-Nat.Wind.2.t <- 111:166
-Nat.Wind.2.y <- deseasonal_Nat.Wind[111:166]
-lm.Nat.Wind.2 <- lm(Nat.Wind.2.y~Nat.Wind.2.t)
-summary(lm.Nat.Wind.2)
-```
-
-> Based on the results of the linear regression (F-statistic: 195.1 on 1 and 54 DF,  p-value: < 2.2e-16) there is a significant change in the electricity generation from wind energy between 2010-02-01 and 2014-10-01 (between change point 1 and 2) with an increase of 142540 MWh for every month increase in time.
-
-```{r}
-#Lm trend for wind series section 3
-Nat.Wind.3.t <- 167:189
-Nat.Wind.3.y <- deseasonal_Nat.Wind[167:189]
-lm.Nat.Wind.3 <- lm(Nat.Wind.3.y~Nat.Wind.3.t)
-summary(lm.Nat.Wind.3)
-```
-
-> Based on the results of the linear regression (F-statistic: 10.41 on 1 and 21 DF,  p-value: 0.00404) there is a significant change in the electricity generation from wind energy between 2014-10-01 and 2016-09-01 (between changepoint 2 and 3) with an increasing gradient of 180069 MWh for every month increase in time.
-
-```{r}
-#Lm trend for wind series section 4
-Nat.Wind.4.t <- 189:217
-Nat.Wind.4.y <- deseasonal_Nat.Wind[189:217]
-lm.Nat.Wind.4 <- lm(Nat.Wind.4.y~Nat.Wind.4.t)
-summary(lm.Nat.Wind.4)
-```
-
-> Based on the results of the linear regression (F-statistic: 3.062 on 1 and 27 DF,  p-value: 0.09149) there is no significant change in the electricity generation from solar energy between 2016-09-01 to 2019-01-01 (after changepoint 3)
-
-
 
 ###Trend analysis of wind energy in Kansas.
 
@@ -699,16 +625,18 @@ pettitt.test(deseasonal_KS.Wind[153:217])
 
 > small p value (1.17e-09) indicates a significant changepoint at obs 36 (188). This changepoint occured at 2016-08-01.
 
+**Plot of Kansas wind changepoints**
 ```{r}
-ggplot(data = data.KS.state, (aes(x = Date))) +
+Plot8 <- ggplot(data = data.KS.state, (aes(x = Date))) +
   geom_line(aes(y = (Total/1000), color = "Total")) +
   geom_line(aes(y = (Wind/1000), color = "Wind")) +
   geom_line(aes(y = (Renewable.total/1000), color ="Renewable"), size = 2.5, alpha = 0.3) +
   geom_segment(aes(x = as.Date("2009-07-01"), y = 1500, xend = as.Date("2009-07-01"), yend = 200), arrow = arrow(length = unit(0.3, "cm")), color= "darkolivegreen", linetype = "dashed") +geom_label(aes(label="Change point 1", x=as.Date("2009-07-01"), y = 1500) , size=3, fill= "darkolivegreen", color = "white") +
-  geom_segment(aes(x = as.Date("2015-10-01"), y = 2400, xend = as.Date("2015-10-01"), yend = 1100), arrow = arrow(length = unit(0.3, "cm")), color= "darkolivegreen", linetype = "dashed") +geom_label(aes(label="Change point 2", x=as.Date("2015-10-01"), y = 2400) , size=3, fill= "darkolivegreen", color = "white") +
+  geom_segment(aes(x = as.Date("2013-08-01"), y = 1800, xend = as.Date("2013-08-01"), yend = 600), arrow = arrow(length = unit(0.3, "cm")), color= "darkolivegreen", linetype = "dashed") +geom_label(aes(label="Change point 2", x=as.Date("2013-08-01"), y = 1800) , size=3, fill= "darkolivegreen", color = "white") +
+  geom_segment(aes(x = as.Date("2016-08-01"), y = 2400, xend = as.Date("2016-08-01"), yend = 900), arrow = arrow(length = unit(0.3, "cm")), color= "darkolivegreen", linetype = "dashed") +geom_label(aes(label="Change point 3", x=as.Date("2016-08-01"), y = 2400) , size=3, fill= "darkolivegreen", color = "white") +
   xlab("Date") +
   ylab("Electricity Generation (GWh)") +
-  labs(title = "Kansas Electricity Generation by Source") +
+  labs(title = "Kansas wind electricity generation") +
   scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
   scale_colour_manual("Energy sources",
                       values = c("Total"="goldenrod3", 
@@ -717,38 +645,10 @@ ggplot(data = data.KS.state, (aes(x = Date))) +
 
 ```
 
-
-
-
-
-##removing trend component for each of the 3 groups of data - Renewables series
-###First group of data
-```{r echo=FALSE}
-#Lm 
-KS.1.t <- 1:103
-KS.1.ren <- data.KS.state[1:103,3]
-lm.KS1 <- lm(KS.1.ren~KS.1.t)
-summary(lm.KS1 )
+```{r, echo=FALSE,fig.height = 6, fig.width = 8, fig.cap="Kansas wind electricity generation"}
+print(Plot8)
 ```
 
-
-###2nd group of data
-```{r echo=FALSE}
-#Lm 
-KS.2.t <- 103:153
-KS.2.ren <- data.KS.state[103:153,3]
-lm.KS2 <- lm(KS.2.ren~KS.2.t)
-summary(lm.KS2 )
-```
-
-###3rd group of data
-```{r echo=FALSE}
-#Lm 
-KS.3.t <- 154:217
-KS.3.ren <- data.KS.state[154:217,3]
-lm.KS3 <- lm(KS.3.ren~KS.3.t)
-summary(lm.KS3 )
-```
 
 
 <Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
