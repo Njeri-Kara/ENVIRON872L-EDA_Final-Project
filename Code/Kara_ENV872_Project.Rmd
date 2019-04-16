@@ -36,6 +36,7 @@ setwd("C:/Users/jerik/OneDrive/Documents/Spring 2019 Semenster/Environmental Dat
 getwd()
 
 # Load your packages
+library(forecast)
 library(tseries)
 library(Kendall)
 library(dplyr)
@@ -370,91 +371,333 @@ Plot5 <-
 print(Plot5)
 ```
 
-> Based on the series of the major non-renewable energy sources, nuclear energy does not appear to have as significant a trend as coal and Natural gas. It is therefore unlikely that it has contributed significantly to the slight decrease in total non renewable energy generation at the national level. The trend analysis at the national level was therefore carried out on the coal and natural gas series as well as the total non renewable energy series.
+> Based on the series of the major non-renewable energy sources, nuclear energy does not appear to have as significant a trend as coal and Natural gas. It is therefore unlikely that it has contributed significantly to the slight decrease in total non renewable energy generation at the national level. The trend analysis at the national level was therefore carried out on the coal and natural gas series.
+
+###Trend analysis of major renewable and non-renewable energy series.
+
+#### Changing to timeseries data and removing seasonality
+
+> It was necessary to change the energy series into time series and to remove the obvious seasonality so as to be able to carry out trend analysis tests.
 
 
+```{r, echo=TRUE}
+#Changing series of interest into timeseries data
+Nat.Solar.ts.data <- ts(EIA.data.national[,5], start = c(2001,01), end=c(2019,1),frequency = 12)
+Nat.Wind.ts.data <- ts(EIA.data.national[,6], start = c(2001,01), end=c(2019,1),frequency = 12)
+Nat.Renewable.ts.data <- ts(EIA.data.national[,12], start = c(2001,01), end=c(2019,1),frequency = 12)
+Nat.Coal.ts.data <- ts(EIA.data.national[,8], start = c(2001,01), end=c(2019,1),frequency = 12)
+Nat.Gas.ts.data <- ts(EIA.data.national[,9], start = c(2001,01), end=c(2019,1),frequency = 12)
+
+##Removing seasonality
+##Removing seasonality in solar series
+Nat.Solar.decomp <- decompose(Nat.Solar.ts.data)
+deseasonal_Nat.Solar <- seasadj(Nat.Solar.decomp)
+
+##Removing seasonality in wind series
+Nat.Wind.decomp <- decompose(Nat.Wind.ts.data)
+deseasonal_Nat.Wind <- seasadj(Nat.Wind.decomp)
+
+##Removing seasonality in renewable series
+Nat.Renewable.decomp <- decompose(Nat.Renewable.ts.data)
+deseasonal_Nat.Renewable <- seasadj(Nat.Renewable.decomp)
+
+##Removing seasonality in coal series
+Nat.Coal.decomp <- decompose(Nat.Coal.ts.data)
+deseasonal_Nat.Coal <- seasadj(Nat.Coal.decomp)
+
+##Removing seasonality in natural gas series
+Nat.Gas.decomp <- decompose(Nat.Gas.ts.data)
+deseasonal_Nat.Gas <- seasadj(Nat.Gas.decomp)
+```
+
+#### Carrying out ADF and Mankandal trend test
+#### ADF trend tests on series
+
+> To test for a stochastic trend in the series, and ADF trend test was carried out
+
+```{r, echo=TRUE}
+#Checking for a stochastic trend with ADF test on solar series 
+adf.test(deseasonal_Nat.Solar, alternative = "stationary")
+
+#Checking for a stochastic trend with ADF test on wind series 
+adf.test(deseasonal_Nat.Wind, alternative = "stationary")
+
+#Checking for a stochastic trend with ADF test on total renewable energy series 
+adf.test(deseasonal_Nat.Renewable, alternative = "stationary")
+
+#Checking for a stochastic trend with ADF test on coal series 
+adf.test(deseasonal_Nat.Coal, alternative = "stationary")
+
+#Checking for a stochastic trend with ADF test on natural gas series 
+adf.test(deseasonal_Nat.Gas, alternative = "stationary")
+```
+
+> The null hypothesis of the ADF test is that a stochastic trend is present in the series. The test results indicate that the following series have a stochastic trend.
+
+ + The national solar energy series (p-value = 0.9506)
+ + The national wind energy series (p-value = 0.07573)
+ + The national total renewable energy series (p-value = 0.08238)
+ + The national coal energy series (p-value = 0.3148)
+ 
+> The national natural gas series has a low p value (p-value = 0.01354) indicating it does not have a stochastic trend. A Man Kendall test to test for a deterministic trend in the series was therefore carried out. 
+
+#### Mann-Kendall trend tests on natural gas series
+
+```{r, echo=TRUE}
+#Checking for a monotonic trend using the Mann Kendall Test
+MannKendall(deseasonal_Nat.Gas)
+```
+
+> The null hypothesis of the  Mann-Kendall test is that there is no monotonic trend. The low p value of the test (pvalue =< 2.22e-16) indicates that we should reject the null hypothesis for the alternative that a monotonic trend is present in the natural gas series. The trend is increasing (tau = 0.817)
+
+###Changepoint analysis of major renewable energy series.
+#### Changepoint analysis for solar energy series
+```{r, echo=TRUE}
+#analysis of first change point for solar series
+pettitt.test(deseasonal_Nat.Solar)
+```
+
+> Low p-value (< 2.2e-16) indicates that there is a significant changepoint at observation 130 which coresponds to the date 2011-10-01.
+
+```{r, echo=TRUE}
+#analysis of second change point for solar series
+pettitt.test(deseasonal_Nat.Solar[131:217])
+```
+
+> Low p-value (2.978e-14) indicates that there is a significant changepoint at observation 40 (170) which coresponds to the date 2015-02-01.
+
+```{r, echo=TRUE}
+#analysis of third change point for solar series
+pettitt.test(deseasonal_Nat.Solar[171:217])
+```
+
+> Low p-value (2.216e-07) indicates that there is a significant changepoint at observation 24 (194) which coresponds to the date 2017-02-01.
+
+```{r, echo=TRUE}
+#analysis of fourth change point for solar series
+pettitt.test(deseasonal_Nat.Solar[195:217])
+```
+
+> the high p-value (0.2886) of the test indicates that there no other significant changepoint.
+
+**Plot of National solar changepoints**
 ```{r, echo=FALSE}
-#Wind plot
-ggplot(data = data.KS.state, aes(x = Date, y = (Wind/1000))) +
-  geom_line(color = "darkorange", linetype = "solid") +
+Plot6 <- ggplot(data = EIA.data.national, (aes(x = Date))) +
+  geom_line(aes(y = (National.Solar/1000), color = "Solar")) +
+  geom_line(aes(y = (National.Renewable.total/1000), color ="Renewable")) +
+  geom_segment(aes(x = as.Date("2011-10-01"), y = 15000, xend = as.Date("2011-10-01"), yend = 200), arrow = arrow(length = unit(0.3, "cm")), color= "yellow3", linetype = "dashed") +geom_label(aes(label="Change point 1", x=as.Date("2011-10-01"), y = 15000) , size=3, fill= "yellow3", color = "white") +
+  geom_segment(aes(x = as.Date("2015-02-01"), y = 24000, xend = as.Date("2015-02-01"), yend = 1100), arrow = arrow(length = unit(0.3, "cm")), color= "yellow3", linetype = "dashed") +geom_label(aes(label="Change point 2", x=as.Date("2015-02-01"), y = 24000) , size=3, fill= "yellow3", color = "white") +
+  geom_segment(aes(x = as.Date("2017-02-01"), y = 27000, xend = as.Date("2017-02-01"), yend = 2500), arrow = arrow(length = unit(0.3, "cm")), color= "yellow3", linetype = "dashed") +geom_label(aes(label="Change point 3", x=as.Date("2017-02-01"), y = 27000) , size=3, fill= "yellow3", color = "white") +
   xlab("Date") +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Kansas Wind energy series") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+  ylab("Electricity Generation (GWh)") +
+  labs(title = "National Solar Electricity Generation Changepoints") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_colour_manual("Energy sources",
+                      values = c("Total"="goldenrod3", 
+                                 "Solar"="yellow3",
+                                 "Renewable"="yellowgreen")) 
+```
 
-#Total renewable energy plot
-ggplot(data = data.KS.state, aes(x = Date, y = (Renewable.total/1000))) +
-  geom_line(color = "darkgreen") +
-  xlab("Date") +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Kansas renewable energy series") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
-
-#Total Energy
-ggplot(data = data.KS.state, aes(x = Date, y = (Total/1000))) +
-  geom_line(color = "darkred") +
-  xlab("Date") +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Kansas total energy generation series") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
+```{r, echo=FALSE,fig.height = 6, fig.width = 8, fig.cap="National Solar Electricity Generation Changepoints"}
+print(Plot6)
 ```
 
 
-> Analy
 
-#Kansas Data
+
+#### Determining the linear trend of the solar series
+```{r}
+#Lm trend for solar series section 1
+Nat.Solar.1.t <- 1:130
+Nat.Solar.1.y <- deseasonal_Nat.Solar[1:130]
+lm.Nat.Solar.1 <- lm(Nat.Solar.1.y~Nat.Solar.1.t)
+summary(lm.Nat.Solar.1)
+```
+
+> Based on the results of the linear regression (F-statistic: 1.238 on 1 and 129 DF, p-value: 0.2679) there is no significant change in the electricity generation from solar energy before 2011-10-01
+
+```{r}
+#Lm trend for solar series section 2
+Nat.Solar.2.t <- 131:170
+Nat.Solar.2.y <- deseasonal_Nat.Solar[131:170]
+lm.Nat.Solar.2 <- lm(Nat.Solar.2.y~Nat.Solar.2.t)
+summary(lm.Nat.Solar.2)
+```
+
+> Based on the results of the linear regression (F-statistic: 238.1 on 1 and 38 DF,  p-value: < 2.2e-16) there is a significant change in the electricity generation from solar energy between 2011-10-01 and 2015-02-01 (between change point 1 and 2) with an increasing gradient of 43200 MWh for every month increase in time.
+
+```{r}
+#Lm trend for solar series section 3
+Nat.Solar.3.t <- 171:194
+Nat.Solar.3.y <- deseasonal_Nat.Solar[171:194]
+lm.Nat.Solar.3 <- lm(Nat.Solar.3.y~Nat.Solar.3.t)
+summary(lm.Nat.Solar.3)
+```
+
+> Based on the results of the linear regression (F-statistic: 15.39 on 1 and 22 DF,  p-value: 0.0007285) there is a significant change in the electricity generation from solar energy between 2015-02-01 and 2017-02-01 (between changepoint 2 and 3) with an increasing gradient of 53886 MWh for every month increase in time.
+
+```{r}
+#Lm trend for solar series section 4
+Nat.Solar.4.t <- 195:217
+Nat.Solar.4.y <- deseasonal_Nat.Solar[195:217]
+lm.Nat.Solar.4 <- lm(Nat.Solar.4.y~Nat.Solar.4.t)
+summary(lm.Nat.Solar.4)
+```
+
+> Based on the results of the linear regression (F-statistic: 0.3116 on 1 and 21 DF,  p-value: 0.5826) there is no significant change in the electricity generation from solar energy between 2017-02-01 to 2019-01-01 (after changepoint 3)
+
+
+#### Changepoint analysis for wind energy series
+```{r, echo=TRUE}
+#analysis of first change point for wind series
+pettitt.test(deseasonal_Nat.Wind)
+```
+
+> Low p-value (< 2.2e-16) indicates that there is a significant changepoint at observation 110 which coresponds to the date 2010-02-01.
+
+```{r, echo=TRUE}
+#analysis of second change point for wind series
+pettitt.test(deseasonal_Nat.Wind[111:217])
+```
+
+> Low p-value (1.8e-15) indicates that there is a significant changepoint at observation 56 (166) which coresponds to the date 2014-10-01.
+
+```{r, echo=TRUE}
+#analysis of third change point for wind series
+pettitt.test(deseasonal_Nat.Wind[167:217])
+```
+
+> Low p-value (4.379e-06) indicates that there is a significant changepoint at observation 23 (189) which coresponds to the date 2016-09-01.
+
+```{r, echo=TRUE}
+#analysis of fourth change point for solar series
+pettitt.test(deseasonal_Nat.Wind[190:217])
+```
+
+> the high p-value (0.09209) of the test indicates that there no other significant changepoint.
+
+**Plot of National wind changepoints**
+```{r, echo=FALSE}
+Plot7 <- ggplot(data = EIA.data.national, (aes(x = Date))) +
+  geom_line(aes(y = (National.Wind/1000), color = "Wind")) +
+  geom_line(aes(y = (National.Renewable.total/1000), color ="Renewable")) +
+  geom_segment(aes(x = as.Date("2010-02-01"), y = 20000, xend = as.Date("2010-02-01"), yend = 5500), arrow = arrow(length = unit(0.3, "cm")), color= "springgreen4", linetype = "dashed") +geom_label(aes(label="Change point 1", x=as.Date("2010-02-01"), y = 20000) , size=3, fill= "springgreen4", color = "white") +
+  geom_segment(aes(x = as.Date("2014-10-01"), y = 29000, xend = as.Date("2014-10-01"), yend = 14600), arrow = arrow(length = unit(0.3, "cm")), color= "springgreen4", linetype = "dashed") +geom_label(aes(label="Change point 2", x=as.Date("2014-10-01"), y = 29000) , size=3, fill= "springgreen4", color = "white") +
+  geom_segment(aes(x = as.Date("2016-09-01"), y = 35000, xend = as.Date("2016-09-01"), yend = 16450), arrow = arrow(length = unit(0.3, "cm")), color= "springgreen4", linetype = "dashed") +geom_label(aes(label="Change point 3", x=as.Date("2016-09-01"), y = 35000) , size=3, fill= "springgreen4", color = "white") +
+  xlab("Date") +
+  ylab("Electricity Generation (GWh)") +
+  labs(title = "National Wind Electricity Generation Changepoints") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_colour_manual("Energy sources",
+                      values = c("Total"="goldenrod3", 
+                                 "Wind"="springgreen4",
+                                 "Renewable"="yellowgreen")) 
+```
+
+```{r, echo=FALSE,fig.height = 6, fig.width = 8, fig.cap="National Wind Electricity Generation Changepoints"}
+print(Plot7)
+```
+
+#### Determining the linear trend of the wind series
+```{r}
+#Lm trend for wind series section 1
+Nat.Wind.1.t <- 1:110
+Nat.Wind.1.y <- deseasonal_Nat.Wind[1:110]
+lm.Nat.Wind.1 <- lm(Nat.Wind.1.y~Nat.Wind.1.t)
+summary(lm.Nat.Wind.1)
+```
+
+> Based on the results of the linear regression (F-statistic: 205.2 on 1 and 108 DF,  p-value: < 2.2e-16) there is a significant change in the electricity generation from wind energy before chnage point 1 in 2010-02-01. There is an increase of 55251 (MWh) generation for every month increase in time.
+
+```{r}
+#Lm trend for wind series section 2
+Nat.Wind.2.t <- 111:166
+Nat.Wind.2.y <- deseasonal_Nat.Wind[111:166]
+lm.Nat.Wind.2 <- lm(Nat.Wind.2.y~Nat.Wind.2.t)
+summary(lm.Nat.Wind.2)
+```
+
+> Based on the results of the linear regression (F-statistic: 195.1 on 1 and 54 DF,  p-value: < 2.2e-16) there is a significant change in the electricity generation from wind energy between 2010-02-01 and 2014-10-01 (between change point 1 and 2) with an increase of 142540 MWh for every month increase in time.
+
+```{r}
+#Lm trend for wind series section 3
+Nat.Wind.3.t <- 167:189
+Nat.Wind.3.y <- deseasonal_Nat.Wind[167:189]
+lm.Nat.Wind.3 <- lm(Nat.Wind.3.y~Nat.Wind.3.t)
+summary(lm.Nat.Wind.3)
+```
+
+> Based on the results of the linear regression (F-statistic: 10.41 on 1 and 21 DF,  p-value: 0.00404) there is a significant change in the electricity generation from wind energy between 2014-10-01 and 2016-09-01 (between changepoint 2 and 3) with an increasing gradient of 180069 MWh for every month increase in time.
+
+```{r}
+#Lm trend for wind series section 4
+Nat.Wind.4.t <- 189:217
+Nat.Wind.4.y <- deseasonal_Nat.Wind[189:217]
+lm.Nat.Wind.4 <- lm(Nat.Wind.4.y~Nat.Wind.4.t)
+summary(lm.Nat.Wind.4)
+```
+
+> Based on the results of the linear regression (F-statistic: 3.062 on 1 and 27 DF,  p-value: 0.09149) there is no significant change in the electricity generation from solar energy between 2016-09-01 to 2019-01-01 (after changepoint 3)
+
+
+
+###Trend analysis of wind energy in Kansas.
+
+> A changepoint trend analysis was caried out for Kansas state to determine whether renewable energy from wind follows a similar trend to the national wind series
+
+##### Kansas dataset
 
 ```{r echo=FALSE}
-#grouping data by state
-#Kansas Data
-
-data.KS.state <- data.2001_2019 %>%
+#Creating Kansas Dataset
+data.KS.state <- EIA.data.by_state %>%
   filter(STATE=="KS") %>%
-  filter(TYPE.OF.PRODUCER=="Total Electric Power Industry") %>%
-  spread(ENERGY.SOURCE,GENERATION..Megawatthours.) %>%
-  mutate(Hydro = ifelse(is.na(`Hydroelectric Conventional`),0,`Hydroelectric Conventional`)) %>%
-  mutate(Other.Biomass = ifelse(is.na(`Other Biomass`),0,`Other Biomass`)) %>%
-  mutate(Solar = ifelse(is.na(`Solar Thermal and Photovoltaic`),0,`Solar Thermal and Photovoltaic`)) %>%
-  mutate(Wind = ifelse(is.na(Wind),0,Wind)) %>%
-  mutate(Renewable.total = Hydro+Other.Biomass+Solar+Wind) %>%
-  select(YEAR,MONTH,Wind,Renewable.total,Total) %>%
-  mutate(Date = make_date(YEAR,MONTH)) %>%
   select(Date,Wind,Renewable.total,Total)
 
-#CoNVerting into time series
-KS.ts.data <- ts(data.KS.state[,2:4], start = c(2001,01), end=c(2019,1),frequency = 12)
+#Converting into time series
 KS.Wind <- ts(data.KS.state[,2], start = c(2001,01), end=c(2019,1),frequency = 12)
 KS.renewable <- ts(data.KS.state[,3], start = c(2001,01), end=c(2019,1),frequency = 12)
 KS.total <- ts(data.KS.state[,4], start = c(2001,01), end=c(2019,1),frequency = 12)
-
-nobs <- nrow(KS.ts.data)
-t <- 1:nobs
-
-#Wind plot
-ggplot(data = data.KS.state, aes(x = Date, y = (Wind/1000))) +
-  geom_line(color = "darkorange", linetype = "solid") +
-  xlab("Date") +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Kansas Wind energy series") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
-
-#Total renewable energy plot
-ggplot(data = data.KS.state, aes(x = Date, y = (Renewable.total/1000))) +
-  geom_line(color = "darkgreen") +
-  xlab("Date") +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Kansas renewable energy series") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
-
-#Total Energy
-ggplot(data = data.KS.state, aes(x = Date, y = (Total/1000))) +
-  geom_line(color = "darkred") +
-  xlab("Date") +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Kansas total energy generation series") +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y")
-
 ```
+
+####removing seasonal component out of Kansas series
+```{r, echo=TRUE}
+#Removing seasonal component from wind series
+KS.Wind.decomp <- decompose(KS.Wind)
+deseasonal_KS.Wind <- seasadj(KS.Wind.decomp)
+
+#Removing seasonal component from the renewable energy series
+KS.renewable.decomp <- decompose(KS.renewable)
+deseasonal_KS.renewable <- seasadj(KS.renewable.decomp)
+
+#Checking for a stochastic trend with ADF test
+adf.test(deseasonal_KS.Wind, alternative = "stationary")
+adf.test(deseasonal_KS.renewable, alternative = "stationary")
+```
+
+>The result of the ADF test of  the Wind  series (p=0.7845) indicates that the series has a stochastic trend, this result is similar for the total renewable energy series (p=0.7843).
+
+####Changepoint analysis of wind energy series
+
+```{r}
+#analysis of first change point
+pettitt.test(deseasonal_KS.Wind)
+```
+
+> small pvalues (< 2.2e-16) indicates a significant change point was detected in both series in 2009-06-01 (102) for the wind series. 
+
+```{r}
+#analysis of second change point
+pettitt.test(deseasonal_KS.Wind[103:217])
+```
+
+> small p value (< 2.2e-16) indicates a significant changepoint at obs 50 (152). This changepoint occured at 2013-08-01.
+
+```{r}
+#analysis of third change point
+pettitt.test(deseasonal_KS.Wind[153:217])
+```
+
+> small p value (1.17e-09) indicates a significant changepoint at obs 36 (188). This changepoint occured at 2016-08-01.
 
 ```{r}
 ggplot(data = data.KS.state, (aes(x = Date))) +
@@ -475,71 +718,7 @@ ggplot(data = data.KS.state, (aes(x = Date))) +
 ```
 
 
-##removing seasonal component out trend and change point test
-```{r}
-#Checking for Stochastic trend of the Wind series
-KS.Wind.decomp <- decompose(KS.Wind)
-deseasonal_KS.Wind <- seasadj(KS.Wind.decomp) 
 
-#Checking for a stochastic trend with ADF test
-adf.test(deseasonal_KS.Wind, alternative = "stationary")
-
-
-#Checking for a stochastic trend in the renewable energy seroes
-KS.renewable.decomp <- decompose(KS.renewable)
-deseasonal_KS.renewable <- seasadj(KS.renewable.decomp) 
-#Checking for a stochastic trend with ADF test
-adf.test(deseasonal_KS.renewable, alternative = "stationary")
-
-
-#Checking for a stochastic trend in the total energy series
-KS.total.decomp <- decompose(KS.total)
-deseasonal_KS.total <- seasadj(KS.total.decomp) 
-#Checking for a stochastic trend with ADF test
-adf.test(deseasonal_KS.total, alternative = "stationary")
-#Checking for a stationary trend using the Mann Kendall Test
-MannKendall(deseasonal_KS.total)
-```
-
->The result of the ADF test of  the Wind  series (p=0.7845) indicates that the series has a stochastic trend, this result is similar for the total renewable energy series (p=0.7843). However, for the total energy series, the low p-value result (p=0.01) indicates that the series does not have a stochastic trend. A Mann Kendall test was therefore also carried out on the total energy series to test for a deterministic trend in the series. The result of the Mann Kendall test (p =< 2.22e-16) indicates that the series has a positive deterministic trend. 
-
-```{r}
-#analysis of first change point
-pettitt.test(deseasonal_KS.Wind)
-pettitt.test(deseasonal_KS.renewable)
-
-pettitt.test(deseasonal_KS.total)
-
-```
-
-> pvalues are small therefore a change point was detected in both series in June 2009 (102) for the wind and renwable energy series. For the Total energy series, a change point was detected in March 2013 (147) 
-
-```{r}
-#analysis of second change point
-pettitt.test(deseasonal_KS.Wind[103:217])
-pettitt.test(deseasonal_KS.renewable[103:217])
-
-pettitt.test(deseasonal_KS.total[148:217])
-```
-
-> low p value in both wind and renewable series therefore there is a significant changepoint at obs 50 (152). This changepoint occured at August 2013.
-For the total energy series, a change point was detected in 191 (Nov 2016)
-
-
-```{r}
-#analysis of second change point
-pettitt.test(deseasonal_KS.Wind[153:217])
-pettitt.test(deseasonal_KS.renewable[153:217])
-
-pettitt.test(deseasonal_KS.total[192:217])
-```
-
-> low p value for the renewable energu series indicates a significant changepoint at obs 26 (178). This changepoint occured at October 2015.
-
-```{r}
-#analysis of second change point
-pettitt.test(deseasonal_KS.renewable[179:217])
-```
 
 
 ##removing trend component for each of the 3 groups of data - Renewables series
@@ -550,31 +729,8 @@ KS.1.t <- 1:103
 KS.1.ren <- data.KS.state[1:103,3]
 lm.KS1 <- lm(KS.1.ren~KS.1.t)
 summary(lm.KS1 )
-# Storing the coefficients of the model.Bio
-Beta0.KS1 <- lm.KS1$coefficients[1]
-Beta1.KS1 <- lm.KS1$coefficients[2]
 ```
 
-Detrending series group 1
-```{r echo=FALSE}
-### Detrending series for Total.Biomass.Energy.Production series
-Y_detrend.KS1 <- array(0,nobs)
-for (i in 1:102){
-  Y_detrend.KS1[i]= KS.renewable[i]-(Beta0.KS1+Beta1.KS1*i)
-}
-
-Y_detrend.KS1 <- ts(Y_detrend.KS1,frequency = 12)
-
-#Plot of detrended group 1 series compared to normal series
-ggplot() + 
-  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
-  geom_line(data = Y_detrend.KS1, aes(x = t, y = Y_detrend.KS1[t]/1000), color = "black") +
-  xlab('Time (months)') +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Detrended Renewable energy series from 01/2001 to 07/2009") +
-  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black")) +
-  theme(legend.position=c(150,1200))
-```
 
 ###2nd group of data
 ```{r echo=FALSE}
@@ -583,31 +739,6 @@ KS.2.t <- 103:153
 KS.2.ren <- data.KS.state[103:153,3]
 lm.KS2 <- lm(KS.2.ren~KS.2.t)
 summary(lm.KS2 )
-# Storing the coefficients of the model.Bio
-Beta0.KS2 <- lm.KS2$coefficients[1]
-Beta1.KS2 <- lm.KS2$coefficients[2]
-```
-
-Detrending series group 2
-```{r echo=FALSE}
-### Detrending series for Total.Biomass.Energy.Production series
-Y_detrend.KS2 <- array(0,nobs)
-for (i in 103:153){
-  Y_detrend.KS2[i]= KS.renewable[i]-(Beta0.KS2+Beta1.KS2*i)
-}
-
-Y_detrend.KS2 <- ts(Y_detrend.KS2,frequency = 12)
-
-#Plot of detrended group 2 series compared to normal series
-ggplot() + 
-  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
-  geom_line(data = Y_detrend.KS2, aes(x = t, y = Y_detrend.KS2[t]/1000), color = "black") +
-  xlab('Time(months)') +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Detrended Renewable energy series from 08/2009 to 12/2013") +
-  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black")) +
-  theme(legend.position=c(150,1200))
-
 ```
 
 ###3rd group of data
@@ -617,49 +748,8 @@ KS.3.t <- 154:217
 KS.3.ren <- data.KS.state[154:217,3]
 lm.KS3 <- lm(KS.3.ren~KS.3.t)
 summary(lm.KS3 )
-# Storing the coefficients of the model.Bio
-Beta0.KS3 <- lm.KS3$coefficients[1]
-Beta1.KS3 <- lm.KS3$coefficients[2]
 ```
 
-
-### Detrending series group 3
-```{r echo=FALSE}
-### Detrending series for Total.Biomass.Energy.Production series
-Y_detrend.KS3 <- array(0,154)
-for (i in 154:217){
-  Y_detrend.KS3[i]= KS.renewable[i]-(Beta0.KS3+Beta1.KS3*i)
-}
-
-Y_detrend.KS3 <- ts(Y_detrend.KS3,frequency = 12)
-
-
-#Plot of detrended group 2 series compared to normal series
-ggplot() + 
-  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
-  geom_line(data = Y_detrend.KS3, aes(x = t, y = Y_detrend.KS3[t]/1000), color = "black") +
-  xlab('Time (months)') +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Detrended Renewable energy series from 01/2014 to 01/2019") +
-  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black"))
-```
-
-##combining the detrended series
-```{r}
-detrended.KS.a <- append(Y_detrend.KS1[1:103],Y_detrend.KS2[104:153])
-detrended.KS <- append(detrended.KS.a , Y_detrend.KS3[154:217])
-detrended.KS <- ts(detrended.KS,start = c(2001,01), end=c(2019,1),frequency = 12)
-
-#Plot of full detrended series compared to normal series
-ggplot() + 
-  geom_line(data = KS.renewable, aes(x = t, y = KS.renewable[t]/1000), color = "darkgreen") +
-  geom_line(data = detrended.KS, aes(x = t, y = detrended.KS/1000), color = "black") +
-  xlab('Time (months)') +
-  ylab("Energy Generation (GWh)") +
-  labs(title = "Detrended Renewable energy series from 01/2001 to 01/2019") +
-  scale_color_manual(values=c("Normal series"="darkgreen", "Detrended series"="black"))
-
-```
 
 <Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
 
