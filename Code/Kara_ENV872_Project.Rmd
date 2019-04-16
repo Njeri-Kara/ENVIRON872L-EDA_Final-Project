@@ -75,8 +75,16 @@ theme_set(NK.theme)
 
 # Dataset Information
 
-<Information on how the dataset for this analysis were collected, the data contained in the dataset, and any important pieces of information that are relevant to your analyses. This section should contain much of same information as the README file for the dataset but formatted in a way that is more narrative.>
+> The dataset used for this analysis was Energy Information Administration (EIA) data on Monthly total electric power generation in Megawatt Hours (MWh) by State and energy source from 2001 - 2018 obtained from their site. The data contained excel sheets with monthly totals of electricity generation by type of power producer and type of energy source in 51 states in the US including national total from January 2001 to January 2019. The dataset included 14 tyoes of energy sources and 6 types of energy producers:
 
+ + Combined Heat and Power, Commercial Power
+ + Combined Heat and Power, Electric Power
+ + Combined Heat and Power, Industrial Power 
+ + Electric Generators, Electric Utilities
+ + Electric Generators, Independent Power Producers
+ + Total Electric Power Industry
+
+> The U.S. Renewable Portfolio Standards 2018 Annual Status Report written by the Lawrence Berkeley National Laboratory was also used as the reerence source to obtain information on the years states, particularly Kansas and California, made major revisions to their RPS policies.
 
 ```{r, echo=FALSE}
 #importing the raw data
@@ -317,7 +325,7 @@ print(Plot3)
 \newpage
 
 # Analysis
-##National level trend analysis
+##A. National level trend analysis
 ###Visualization of trends of major renewable and non-renewable energy sources
 
 > Based on the data exploration and specifically figure XX(PLOT3), The major renewable energy sources appear to be Hydroelectric power, wind energy and solar energy. The major non renewable energy sources are coal energy, natural gas energy and nuclear energy.
@@ -419,7 +427,7 @@ deseasonal_Nat.Gas <- seasadj(Nat.Gas.decomp)
 ```
 
 #### Carrying out ADF and Mankandal trend test
-#### ADF trend tests on series
+##### ADF trend tests on series
 
 > To test for a stochastic trend in the series, and ADF trend test was carried out
 
@@ -449,7 +457,7 @@ adf.test(deseasonal_Nat.Gas, alternative = "stationary")
  
 > The national natural gas series has a low p value (p-value = 0.01354) indicating it does not have a stochastic trend. A Man Kendall test to test for a deterministic trend in the series was therefore carried out. 
 
-#### Mann-Kendall trend tests on natural gas series
+##### Mann-Kendall trend tests on natural gas series
 
 ```{r, echo=TRUE}
 #Checking for a monotonic trend using the Mann Kendall Test
@@ -511,11 +519,6 @@ print(Plot6)
 ```
 
 
-
-
-
-
-
 #### Changepoint analysis for wind energy series
 ```{r, echo=TRUE}
 #analysis of first change point for wind series
@@ -567,6 +570,7 @@ Plot7 <- ggplot(data = EIA.data.national, (aes(x = Date))) +
 print(Plot7)
 ```
 
+##B. State level trend analysis
 ###Trend analysis of wind energy in Kansas.
 
 > A changepoint trend analysis was caried out for Kansas state to determine whether renewable energy from wind follows a similar trend to the national wind series
@@ -585,7 +589,7 @@ KS.renewable <- ts(data.KS.state[,3], start = c(2001,01), end=c(2019,1),frequenc
 KS.total <- ts(data.KS.state[,4], start = c(2001,01), end=c(2019,1),frequency = 12)
 ```
 
-####removing seasonal component out of Kansas series
+####Removing seasonal component out in Kansas series
 ```{r, echo=TRUE}
 #Removing seasonal component from wind series
 KS.Wind.decomp <- decompose(KS.Wind)
@@ -649,9 +653,90 @@ Plot8 <- ggplot(data = data.KS.state, (aes(x = Date))) +
 print(Plot8)
 ```
 
+###Trend analysis of solar energy in California.
+##### California dataset
+```{r echo=FALSE}
+#Creating California Dataset
+data.CA.state <- EIA.data.by_state %>%
+  filter(STATE=="CA") %>%
+  select(Date,Solar,Renewable.total,Total)
 
+#Converting into time series
+CA.Solar <- ts(data.CA.state[,2], start = c(2001,01), end=c(2019,1),frequency = 12)
+CA.renewable <- ts(data.CA.state[,3], start = c(2001,01), end=c(2019,1),frequency = 12)
+CA.total <- ts(data.CA.state[,4], start = c(2001,01), end=c(2019,1),frequency = 12)
+```
 
-<Include text sections to accompany these R chunks to explain the reasoning behind your workflow, rationale for your approach, and the justification of meeting or failing to meet assumptions of tests.>
+####Removing seasonal component out of California series
+```{r, echo=TRUE}
+#Removing seasonal component from solar series
+CA.Solar.decomp <- decompose(CA.Solar)
+deseasonal_CA.Solar <- seasadj(CA.Solar.decomp) 
+
+#Removing seasonal component from the renewable energy series
+CA.renewable.decomp <- decompose(CA.renewable)
+deseasonal_CA.renewable <- seasadj(CA.renewable.decomp) 
+
+#Checking for a stochastic trend with ADF test
+adf.test(deseasonal_CA.Solar, alternative = "stationary")
+adf.test(deseasonal_CA.renewable, alternative = "stationary")
+```
+
+>The result of the ADF test of  the solar  series (p=0.7322) indicates that the series has a stochastic trend. This result is similar for the total renewable energy series (p=0.2701).
+
+####Changepoint analysis of solar energy series
+
+```{r}
+#analysis of first change point
+pettitt.test(deseasonal_CA.Solar)
+```
+
+> small p value (< 2.2e-16) indicates there a change point was detected in the  solar series in observation 142 corresponding to 2012-10-01. 
+
+```{r}
+#analysis of second change point
+pettitt.test(deseasonal_CA.Solar[143:217])
+```
+
+> small p value (2.106e-11) indicates there a changepoint was detected at observation 39 (181) corresponding to 2016-01-01.
+
+```{r}
+#analysis of third change point
+pettitt.test(deseasonal_CA.Solar[182:217])
+```
+
+> small p value (0.00846)indicates there a changepoint was detected at observation 13 (194) corresponding to 2017-02-01.
+
+```{r}
+#analysis of fourth change point
+pettitt.test(deseasonal_CA.Solar[195:217])
+```
+
+> large p value (0.6137)indicates there is no other significant changepoint. 
+
+**Plot of California solar changepoints**
+```{r}
+Plot9 <- ggplot(data = data.CA.state, (aes(x = Date))) +
+  geom_line(aes(y = (Total/1000), color = "Total")) +
+  geom_line(aes(y = (Solar/1000), color = "Solar")) +
+  geom_line(aes(y = (Renewable.total/1000), color ="Renewable")) +
+  geom_segment(aes(x = as.Date("2012-10-01"), y = 2000, xend = as.Date("2012-10-01"), yend = 140), arrow = arrow(length = unit(0.2, "cm")), color= "yellow3", linetype = "dashed") +geom_label(aes(label="Change point 1", x=as.Date("2012-10-01"), y = 2000) , size=2.5, fill= "yellow3", color = "white") +
+  geom_segment(aes(x = as.Date("2016-01-01"), y = 3000, xend = as.Date("2016-01-01"), yend = 800), arrow = arrow(length = unit(0.2, "cm")), color= "yellow3", linetype = "dashed") +geom_label(aes(label="Change point 2", x=as.Date("2016-01-01"), y = 3000) , size=2.5, fill= "yellow3", color = "white") +
+  geom_segment(aes(x = as.Date("2017-02-01"), y = 4000, xend = as.Date("2017-02-01"), yend = 1100), arrow = arrow(length = unit(0.2, "cm")), color= "yellow3", linetype = "dashed") +geom_label(aes(label="Change point 3", x=as.Date("2017-02-01"), y = 4000) , size=2.5, fill= "yellow3", color = "white") +
+  xlab("Date") +
+  ylab("Electricity Generation (GWh)") +
+  labs(title = "California solar electricity generation") +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  scale_colour_manual("Energy sources",
+                      values = c("Total"="goldenrod3", 
+                                 "Solar"="yellow3",
+                                 "Renewable"="yellowgreen")) 
+
+```
+
+```{r, echo=FALSE,fig.height = 6, fig.width = 8, fig.cap="California solar electricity generation"}
+print(Plot9)
+```
 
 
 \newpage
@@ -659,5 +744,23 @@ print(Plot8)
 # Summary and Conclusions
 <Summarize your major findings from your analyses. What conclusions do you draw from your findings? Make sure to apply this to a broader application for the research question you have answered.>
 
+> The table below summarizes the results of the changepoint analysis tests for the electricity generation from solar energy at the national level and in California and electricity generation from wind energy at the national level and in Kansas.
+
+Dataset                 | Changepoint 1 | Changepoint 2 |Changepoint 3 |
+------------------------|---------------|-------------- |--------------|
+National solar energy   | 10/2011       | 02/2015       |02/2017       |
+National wind energy    | 02/2010       | 10/2014       |09/2016       |
+Kansas wind energy      | 06/2009       | 08/2013       |08/2016       |
+California solar energy | 10/2012       | 01/2016       |02/2017       |
+
+> all analysed energy generation series had three changepoints. All changepoints occur post 2008 indicating the rate of adoption of renewable energy for electricity generation has changed in the last decade, consistent with the literature. All changepoints indicate also an increase in electricty generation from the renewable resource.
+
+> Changepoint 1 and two at the national and state level do not appear to be related for both wind energy and solar. Change point 3 for solar and wind energy at the state and national level however coincide. This could indicate that significant increase in renewable energy levels is being driven by specific states and cannot neccessaritly be generalized to all.
+
+> The changepoint 1 in Kansas wind energy series coresponds to the year the state adopted the RPS policy. Changepoint 2 does not correspond to any policy change however it is the year Kansas reached its renewable energy target of 20% of its electricity generation being from renewable resources. 
+
+> For California, changepoint 1 and 3 does not correspond to any major renewable energy policy changes. A major policy revison however took place in 2015 and could have resulted in a shift in the solar energy trend as shown in changepoint 2. 
+
+> It is therefore probable that polciy changes have impacted the adoption trends for wind and solar energy in Kansas and California, however more analysis needs to be done in this area to be able to definitively determine the causal relationship between policy changes and renewable energy adoption.
 
 
